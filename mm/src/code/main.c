@@ -49,6 +49,10 @@ size_t gSystemHeapSize = 0;
 
 void InitOTR(int argc, char* argv[]);
 void Heaps_Free(void);
+#ifdef __ANDROID__
+// Maps main to SDL_main, the symbol SDLActivity looks for.
+#include <SDL.h>
+#endif
 #ifdef __GNUC__
 #define SDL_main main
 #endif

@@ -132,7 +132,7 @@ endif()
 ################################################################################
 # Global configuration types
 ################################################################################
-if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+if (CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch|Android")
     set(CMAKE_C_FLAGS_DEBUG "-g -ffast-math -DDEBUG")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -ffast-math -DDEBUG")
     set(CMAKE_C_FLAGS_RELEASE "-O3 -ffast-math -DNDEBUG")
@@ -183,6 +183,10 @@ add_compile_definitions(CONTROLLERBUTTONS_T=uint32_t)
 ################################################################################
 # Sub-projects
 ################################################################################
+if(ANDROID)
+    include(CMake/AndroidDependencies.cmake)
+endif()
+
 add_subdirectory(libultraship ${CMAKE_BINARY_DIR}/libultraship)
 target_compile_definitions(libultraship PUBLIC INCLUDE_MPQ_SUPPORT)
 
@@ -206,6 +210,11 @@ endif()
 
 add_subdirectory(ZAPDTR/ZAPD ${CMAKE_BINARY_DIR}/ZAPD)
 add_subdirectory(OTRExporter)
+if(ANDROID)
+    target_link_libraries(OTRExporter PUBLIC tinyxml2::tinyxml2)
+    target_link_libraries(OTRExporter PRIVATE libzip::zip)
+    target_include_directories(OTRExporter PUBLIC ${libzip_SOURCE_DIR}/lib ${libzip_BINARY_DIR})
+endif()
 add_subdirectory(mm)
 
 set_property(TARGET 2ship PROPERTY APPIMAGE_DESKTOP_FILE_TERMINAL YES)
@@ -313,5 +322,7 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(CPACK_GENERATOR "Bundle")
 endif()
 
-set(CPACK_PROJECT_CONFIG_FILE ${CMAKE_SOURCE_DIR}/CMake/Packaging-2.cmake)
-include(CMake/Packaging.cmake)
+if(NOT ANDROID)
+    set(CPACK_PROJECT_CONFIG_FILE ${CMAKE_SOURCE_DIR}/CMake/Packaging-2.cmake)
+    include(CMake/Packaging.cmake)
+endif()

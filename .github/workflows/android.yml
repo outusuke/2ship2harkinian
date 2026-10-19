@@ -1,0 +1,50 @@
+name: Android
+
+on:
+  push:
+    branches: [android-port]
+  workflow_dispatch:
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        id: configure
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 2>&1 | tee configure.log
+
+      - name: Build (keep going)
+        id: build
+        if: steps.configure.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          cmake --build build -- -k 0 2>&1 | tee build.log
+
+      - name: Collect errors
+        if: always()
+        run: |
+          grep -hE -A3 "CMake Error|error:|undefined (reference|symbol)|FAILED:" *.log | sort -u > errors.txt || true
+          wc -l errors.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-logs
+          path: |
+            *.log
+            errors.txt
+
+      - name: Fail if configure or build failed
+        if: steps.configure.outcome == 'failure' || steps.build.outcome == 'failure'
+        run: exit 1

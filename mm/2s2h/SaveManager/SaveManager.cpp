@@ -30,7 +30,9 @@ extern FileSelectState* gFileSelectState;
     ((GET_NEWF(save, 0) == 'Z') && (GET_NEWF(save, 1) == 'E') && (GET_NEWF(save, 2) == 'L') && \
      (GET_NEWF(save, 3) == 'D') && (GET_NEWF(save, 4) == 'A') && (GET_NEWF(save, 5) == '3'))
 
-const std::filesystem::path savesFolderPath(Ship::Context::GetPathRelativeToAppDirectory("saves", appShortName));
+static std::filesystem::path SaveManager_GetSavesFolderPath() {
+    return Ship::Context::GetPathRelativeToAppDirectory("saves", appShortName);
+}
 
 // Migrations
 // The idea here is that we can read in any version of the save as generic JSON, then apply migrations
@@ -109,6 +111,7 @@ int SaveManager_MigrateSave(nlohmann::json& j) {
 }
 
 void SaveManager_WriteSaveFile(const std::filesystem::path& fileName, nlohmann::json j) {
+    const std::filesystem::path savesFolderPath = SaveManager_GetSavesFolderPath();
     const std::filesystem::path filePath = savesFolderPath / fileName;
 
     if (!std::filesystem::exists(savesFolderPath)) {
@@ -123,6 +126,7 @@ void SaveManager_WriteSaveFile(const std::filesystem::path& fileName, nlohmann::
 }
 
 void SaveManager_DeleteSaveFile(const std::filesystem::path& fileName) {
+    const std::filesystem::path savesFolderPath = SaveManager_GetSavesFolderPath();
     const std::filesystem::path filePath = savesFolderPath / fileName;
 
     try {
@@ -133,6 +137,7 @@ void SaveManager_DeleteSaveFile(const std::filesystem::path& fileName) {
 }
 
 int SaveManager_ReadSaveFile(const std::filesystem::path& fileName, nlohmann::json& j) {
+    const std::filesystem::path savesFolderPath = SaveManager_GetSavesFolderPath();
     const std::filesystem::path filePath = savesFolderPath / fileName;
 
     if (!std::filesystem::exists(filePath)) {
@@ -179,6 +184,7 @@ void SaveManager_PersistSariaHintsAvailable() {
 }
 
 void SaveManager_MoveInvalidSaveFile(const std::filesystem::path& fileName, const std::string& message) {
+    const std::filesystem::path savesFolderPath = SaveManager_GetSavesFolderPath();
     const std::filesystem::path filePath = savesFolderPath / fileName;
     const std::filesystem::path backupFilePath =
         savesFolderPath / (fileName.stem().string() + "_invalid_" + std::to_string(std::time(nullptr)) + ".json");
@@ -194,6 +200,7 @@ void SaveManager_MoveInvalidSaveFile(const std::filesystem::path& fileName, cons
 }
 
 int SaveManager_GetOpenFileSlot() {
+    const std::filesystem::path savesFolderPath = SaveManager_GetSavesFolderPath();
     std::string fileName = "file1.json";
     if (!std::filesystem::exists(savesFolderPath / fileName)) {
         return 1;
