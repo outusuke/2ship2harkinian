@@ -1,5 +1,8 @@
 include(FetchContent)
 
+# Selects the GLES path in libultraship's Fast3D backend and links GLESv3.
+set(USE_OPENGLES ON CACHE BOOL "Enable GLES3" FORCE)
+
 function(android_apply_patch dir patch)
     execute_process(
         COMMAND git apply --check --reverse ${patch}

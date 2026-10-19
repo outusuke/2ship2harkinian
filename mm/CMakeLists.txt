@@ -631,6 +631,8 @@ elseif(ANDROID)
         PNG::PNG
         SDL2::SDL2
         Threads::Threads
+        GLESv3
+        EGL
         log
         android
     )
