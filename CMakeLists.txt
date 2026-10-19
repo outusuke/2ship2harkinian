@@ -132,7 +132,7 @@ endif()
 ################################################################################
 # Global configuration types
 ################################################################################
-if (CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch|Android")
+if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
     set(CMAKE_C_FLAGS_DEBUG "-g -ffast-math -DDEBUG")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -ffast-math -DDEBUG")
     set(CMAKE_C_FLAGS_RELEASE "-O3 -ffast-math -DNDEBUG")

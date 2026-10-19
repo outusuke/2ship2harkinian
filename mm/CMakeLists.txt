@@ -628,6 +628,7 @@ elseif(ANDROID)
         Vorbis::vorbisfile
         Opus::opus
         OpusFile::opusfile
+        PNG::PNG
         SDL2::SDL2
         Threads::Threads
         log

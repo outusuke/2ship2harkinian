@@ -68,6 +68,11 @@ if(NOT Opus_FOUND)
         OVERRIDE_FIND_PACKAGE
     )
     FetchContent_MakeAvailable(Opus)
+
+    # The game includes <opus/opus.h>, the layout an install gives it.
+    file(GLOB opus_headers ${opus_SOURCE_DIR}/include/*.h)
+    file(COPY ${opus_headers} DESTINATION ${CMAKE_BINARY_DIR}/android-include/opus)
+    target_include_directories(opus INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/android-include>)
 endif()
 
 find_package(OpusFile QUIET)
@@ -83,6 +88,9 @@ if(NOT OpusFile_FOUND)
         OVERRIDE_FIND_PACKAGE
     )
     FetchContent_MakeAvailable(OpusFile)
+
+    file(COPY ${opusfile_SOURCE_DIR}/include/opusfile.h DESTINATION ${CMAKE_BINARY_DIR}/android-include/opus)
+    target_include_directories(opusfile INTERFACE $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/android-include>)
 endif()
 
 find_package(PNG QUIET)
@@ -101,9 +109,13 @@ if(NOT PNG_FOUND)
     )
     FetchContent_MakeAvailable(PNG)
 
-    # ZAPD links PNG::PNG, which a subproject build of libpng never defines.
+    # ZAPD links PNG::PNG, which a subproject build of libpng never defines, and
+    # pnglibconf.h is generated into the build tree.
     if(TARGET png_static AND NOT TARGET PNG::PNG)
-        add_library(PNG::PNG ALIAS png_static)
+        add_library(png_android INTERFACE)
+        target_link_libraries(png_android INTERFACE png_static)
+        target_include_directories(png_android INTERFACE ${png_BINARY_DIR} ${png_SOURCE_DIR})
+        add_library(PNG::PNG ALIAS png_android)
     endif()
     set(PNG_PNG_INCLUDE_DIR ${png_BINARY_DIR} ${png_SOURCE_DIR})
     set(PNG_INCLUDE_DIRS ${png_BINARY_DIR} ${png_SOURCE_DIR})
