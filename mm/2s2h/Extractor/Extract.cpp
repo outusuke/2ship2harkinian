@@ -582,14 +582,19 @@ bool Extractor::CallZapd(std::string installPath, std::string exportdir, std::at
     std::string romPath = std::filesystem::absolute(mCurrentRomPath).string();
     installPath = std::filesystem::absolute(installPath).string();
     exportdir = std::filesystem::absolute(exportdir).string();
+    std::string curdir = std::filesystem::current_path().string();
+#ifdef __ANDROID__
+    // The app's storage has no temp directory and no symlinks, so work in place.
+    std::string tempdir = installPath;
+#else
     // Work this out in the temporary folder
     std::string tempdir = Mkdtemp();
-    std::string curdir = std::filesystem::current_path().string();
 #ifdef _WIN32
     std::filesystem::copy(installPath + "/assets", tempdir + "/assets",
                           std::filesystem::copy_options::recursive | std::filesystem::copy_options::update_existing);
 #else
     std::filesystem::create_symlink(installPath + "/assets", tempdir + "/assets");
+#endif
 #endif
 
     std::filesystem::current_path(tempdir);
@@ -623,11 +628,15 @@ bool Extractor::CallZapd(std::string installPath, std::string exportdir, std::at
 
     zapd_report(argc, (char**)argv.data(), extractCount, totalExtract);
 
+#ifndef __ANDROID__
     std::filesystem::copy(otrFile, exportdir + "/" + otrFile, std::filesystem::copy_options::overwrite_existing);
+#endif
 
     // Go back to where this game was executed from
     std::filesystem::current_path(curdir);
+#ifndef __ANDROID__
     std::filesystem::remove_all(tempdir);
+#endif
 
     return false;
 }

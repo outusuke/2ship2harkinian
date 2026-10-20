@@ -48,3 +48,97 @@ jobs:
       - name: Fail if configure or build failed
         if: steps.configure.outcome == 'failure' || steps.build.outcome == 'failure'
         run: exit 1
+
+  engine-archive:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $(cat .github/workflows/apt-deps.txt) libzip-dev zipcmp zipmerge ziptool
+
+      - name: Install latest SDL
+        run: |
+          wget https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-2.30.3.tar.gz
+          tar -xzf SDL2-2.30.3.tar.gz
+          cd SDL2-2.30.3
+          ./configure --enable-hidapi-libusb
+          make -j 4
+          sudo make install
+          sudo cp -av /usr/local/lib/libSDL* /lib/x86_64-linux-gnu/
+
+      - name: Install latest tinyxml2
+        run: |
+          sudo apt-get remove libtinyxml2-dev
+          wget https://github.com/leethomason/tinyxml2/archive/refs/tags/10.0.0.tar.gz
+          tar -xzf 10.0.0.tar.gz
+          cd tinyxml2-10.0.0
+          mkdir -p build
+          cd build
+          cmake ..
+          make
+          sudo make install
+
+      - name: Generate 2ship.o2r
+        run: |
+          cmake --no-warn-unused-cli -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE:STRING=Release
+          cmake --build build-cmake --config Release --target Generate2ShipOtr -j3
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 2ship.o2r
+          path: 2ship.o2r
+          retention-days: 3
+
+  apk:
+    needs: engine-archive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: 2ship.o2r
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build APK
+        id: gradle
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          cd android
+          ./gradlew assembleDebug --continue 2>&1 | tee ../gradle.log
+
+      - name: Collect errors
+        if: always()
+        run: |
+          grep -hE -A3 "^e: |error:|undefined (reference|symbol)|CMake Error|What went wrong|FAILED" gradle.log | cut -c1-300 | sort -u > apk-errors.txt || true
+          wc -l apk-errors.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apk-logs
+          path: |
+            gradle.log
+            apk-errors.txt
+
+      - uses: actions/upload-artifact@v4
+        if: steps.gradle.outcome == 'success'
+        with:
+          name: 2ship-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+
+      - name: Fail if the build failed
+        if: steps.gradle.outcome == 'failure'
+        run: exit 1
