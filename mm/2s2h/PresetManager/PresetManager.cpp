@@ -667,9 +667,14 @@ nlohmann::json voyage3PresetJ = R"(
 )"_json;
 
 std::unordered_map<std::string, std::pair<nlohmann::json, std::set<std::string>>> presets = {};
-const std::filesystem::path presetsFolderPath(Ship::Context::GetPathRelativeToAppDirectory("presets", appShortName));
+
+// Not a global: on Android the path lookup needs SDL, which isn't up during static init.
+static std::filesystem::path PresetManager_GetPresetsFolderPath() {
+    return Ship::Context::GetPathRelativeToAppDirectory("presets", appShortName);
+}
 
 void PresetManager_RefreshPresets() {
+    const std::filesystem::path presetsFolderPath = PresetManager_GetPresetsFolderPath();
     presets.clear();
     presets.insert(
         { "Defaults (Everything Off)", { defaultsPresetJ, { "Developer Tools", "Enhancements", "HUD", "Rando" } } });
@@ -816,7 +821,7 @@ void PresetManager_CreatePreset(std::string presetName) {
         newJson["CVars"].erase("gWindows");
 
         std::string presetFileName = presetName + ".json";
-        const std::filesystem::path newPresetFilePath = presetsFolderPath / presetFileName;
+        const std::filesystem::path newPresetFilePath = PresetManager_GetPresetsFolderPath() / presetFileName;
         std::ofstream newFileStream(newPresetFilePath);
         newFileStream << newJson.dump(4);
 
@@ -879,7 +884,7 @@ bool PresetManager_HandleFileDropped(char* filePath) {
 
         // Save the spoiler file to the presets folder
         std::string presetFileName = std::filesystem::path(filePath).filename().string();
-        const std::filesystem::path newPresetFilePath = presetsFolderPath / presetFileName;
+        const std::filesystem::path newPresetFilePath = PresetManager_GetPresetsFolderPath() / presetFileName;
         std::filesystem::copy_file(filePath, newPresetFilePath, std::filesystem::copy_options::overwrite_existing);
 
         PresetManager_RefreshPresets();
@@ -898,7 +903,7 @@ void PresetManager_Draw() {
                        "refresh the list.");
     ImGui::PopStyleColor();
     if (UIWidgets::Button("Open Presets Folder", { .size = ImVec2(ImGui::GetContentRegionAvail().x - 42, 0) })) {
-        std::string path = "file:///" + std::filesystem::absolute(presetsFolderPath).string();
+        std::string path = "file:///" + std::filesystem::absolute(PresetManager_GetPresetsFolderPath()).string();
         SDL_OpenURL(path.c_str());
     }
     ImGui::SameLine();
